@@ -652,7 +652,7 @@ void thread_sleep(int64_t ticks){
 
 void thread_awake(int64_t ticks){
 
-  //global_ticks = INT64_MAX;
+  global_ticks = INT64_MAX;
 
   struct list_elem *e;
 
