@@ -1,5 +1,4 @@
 #include "threads/thread.h"
-#include <cstdint>
 #include <debug.h>
 #include <stddef.h>
 #include <random.h>
@@ -618,7 +617,7 @@ void thread_sleep(int64_t ticks){
 
   ASSERT(atual != idle_thread);
 
-  cur->local_ticks = ticks;
+  atual->local_ticks = ticks;
   
   if(global_ticks > ticks){
     global_ticks = ticks;
@@ -652,14 +651,14 @@ void thread_sleep(int64_t ticks){
 
 void thread_awake(int64_t ticks){
 
-  global_ticks = INT64_MAX;
+  //global_ticks = INT64_MAX;
 
   struct list_elem *e;
 
   for(e = list_rbegin(&sleep_list); e != list_rend(&sleep_list); e = list_prev(e)){
     struct thread *f = list_entry(e, struct thread, elem);
 
-    if(ticks >= f->local_tick){
+    if(ticks >= f->local_ticks){
       e = list_remove(&f->elem);
       thread_unblock(f);
     }else{
