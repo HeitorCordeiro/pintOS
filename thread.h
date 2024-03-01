@@ -4,7 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include <sys/types.h>
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -101,7 +101,7 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-    int64_t local_ticks
+    int64_t local_ticks;
   };
 
 /* If false (default), use round-robin scheduler.
