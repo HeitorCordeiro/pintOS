@@ -1,7 +1,9 @@
 #include "threads/thread.h"
+#include <cstdint>
 #include <debug.h>
 #include <stddef.h>
 #include <random.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "threads/flags.h"
@@ -20,9 +22,19 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+/*the minimun value of local tick of threads
+  save the time to scan the sleep list
+  don't forget to initialize it
+  isso vai indicar a proxima tread que vai acordar*/
+static int64_t global_ticks;
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+
+/* Lista de processos in THREAD_SLEEP*/
+
+static struct list sleep_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -36,6 +48,8 @@ static struct thread *initial_thread;
 
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
+
+
 
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame 
@@ -91,6 +105,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
+  list_init (&sleep_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -171,6 +186,7 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
+  enum intr_level old_level;
 
   ASSERT (function != NULL);
 
@@ -182,6 +198,8 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+
+  old_level = intr_disable(); 
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -197,6 +215,8 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
+
+  intr_set_level(old_level);
 
   /* Add to run queue. */
   thread_unblock (t);
@@ -451,7 +471,6 @@ is_thread (struct thread *t)
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
-  enum intr_level old_level;
 
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
@@ -463,10 +482,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-
-  old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
-  intr_set_level (old_level);
+ 
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -582,3 +599,81 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+/*if  the current thread is not idle threas, (feito)
+      store the local tick to wake up (feito),
+      update the global tick if necessary(feito),
+      change the sate of the caller thread to blocked(feito)
+      and call schedule()
+  when you manipulate thread list, disable interrupt!(feito)*/
+
+void thread_sleep(int64_t ticks){
+
+  struct thread *atual;
+
+  enum intr_level old_level;
+  old_level = intr_disable();
+  
+  atual = thread_current();
+
+  ASSERT(atual != idle_thread);
+
+  cur->local_ticks = ticks;
+  
+  if(global_ticks > ticks){
+    global_ticks = ticks;
+  }
+
+  list_push_back(&sleep_list, &atual->elem);
+
+  thread_block();
+  intr_set_level(old_level);
+
+}
+
+/* Returns LIST's head.
+
+   list_rend() is often used in iterating through a list in
+   reverse order, from back to front.  Here's typical usage,
+   following the example from the top of list.h:
+
+      for (e = list_rbegin (&foo_list); e != list_rend (&foo_list);
+           e = list_prev (e))
+        {
+          struct foo *f = list_entry (e, struct foo, elem);
+          ...do something with f...
+        }
+*/
+
+/* rbegin: Returns the LIST's reverse beginning, for iterating through
+*/
+
+
+
+void thread_awake(int64_t ticks){
+
+  //global_ticks = INT64_MAX;
+
+  struct list_elem *e;
+
+  for(e = list_rbegin(&sleep_list); e != list_rend(&sleep_list); e = list_prev(e)){
+    struct thread *f = list_entry(e, struct thread, elem);
+
+    if(ticks >= f->local_tick){
+      e = list_remove(&f->elem);
+      thread_unblock(f);
+    }else{
+      e = list_next(e);
+      if(global_ticks > f->local_ticks){
+        global_ticks = f->local_ticks;
+      }
+    }
+  }
+
+}
+
+int64_t pegar_global_ticks (void){
+  
+  return global_ticks;
+
+}
