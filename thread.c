@@ -608,29 +608,27 @@ void thread_sleep(int64_t ticks){
 
 }
 
-void
-thread_wakeup(void)
-{
-  struct thread *t;
-  struct list_elem *cur = list_begin (&sleep_list), *next;
+void thread_wakeup(void){
 
-   if (list_empty (&sleep_list))
-     return;
 
-   while (cur != list_end (&sleep_list))
-     {
-       next = list_next (cur);
-       t = list_entry (cur, struct thread, elem);
-      if (t->time_to_wakeup > timer_ticks())
-         break;
+  struct list_elem *e = list_begin(&sleep_list);
 
-       // Remove the thread from timer_wait_list
-       // then unblock it
-       enum intr_level old_level;
-       old_level = intr_disable ();
-      list_remove (cur);
-             thread_unblock (t);
-       intr_set_level (old_level);
-       cur = next;
-     }
+  if(list_empty(&sleep_list)){
+    return;
+  }
+  
+  while(e != list_end(&sleep_list)){
+
+    struct thread *t = list_entry(e, struct thread, elem);
+    if(t->time_to_wakeup > timer_ticks())
+      break;
+
+    enum intr_level old_level = intr_disable();
+    e = list_remove(e);
+    thread_unblock(t);
+    intr_set_level(old_level);
+
+  }
+
+
 }
