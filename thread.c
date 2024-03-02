@@ -597,12 +597,14 @@ void thread_sleep(int64_t ticks){
 
   struct thread *atual = thread_current();
   enum intr_level old_level;
-  
-  ASSERT (!intr_context ());
 
+  ASSERT (!intr_context ());
+  
   old_level = intr_disable ();
-  if (atual != idle_thread) 
+  if(atual != idle_thread){
+    atual->time_to_wakeup = ticks;
     list_insert_ordered(&sleep_list, &atual->elem, sort, NULL);
+  }
   thread_block();
   intr_set_level (old_level);
 
@@ -610,12 +612,7 @@ void thread_sleep(int64_t ticks){
 
 void thread_wakeup(void){
 
-
   struct list_elem *e = list_begin(&sleep_list);
-
-  if(list_empty(&sleep_list)){
-    return;
-  }
   
   while(e != list_end(&sleep_list)){
 
@@ -629,6 +626,5 @@ void thread_wakeup(void){
     intr_set_level(old_level);
 
   }
-
 
 }
