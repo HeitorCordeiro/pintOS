@@ -169,6 +169,12 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
+
+/*int increase_recent_cpu(int recent_cpu){
+
+  return recent_cpu = recent_cpu + FLOAT_CONST(1);
+
+}*/
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
@@ -177,6 +183,17 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
   thread_wakeup();
+
+  if(thread_mlfqs){
+    thread_current()->recent_cpu = increase_recent_cpu(thread_current()->recent_cpu);
+    if(timer_ticks()%TIMER_FREQ==0){
+      thread_update_load();
+      thread_update_recent_cpu_threads();
+    }
+    if(timer_ticks()%4==0){
+      thread_update_priority_threads();
+    }
+  }
 
 }
 
