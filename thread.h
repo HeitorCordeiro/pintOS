@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -101,8 +102,9 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
     int64_t time_to_wakeup;
-    int recent_cpu;
     int nice;
+    int recent_cpu;
+
   };
 
 /* If false (default), use round-robin scheduler.
@@ -142,13 +144,15 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void thread_sleep(int64_t);
-void thread_wakeup();
+void thread_wakeup(void);
 
-int increase_recent_cpu(int);
-void thread_update_load(void);
-void thread_update_recent_cpu_threads();
-void thread_update_priority_threads();
-
-
+void start_load(void);
+void thread_update_priority(struct thread *t);
+void thread_update_recent_cpu(struct thread *t);
+void increase_recent_cpu(struct thread *t);
+void update_recent_cpu_priority(struct thread*t);
+void thread_update_load_avg();
+void update_all_recent_cpu ();
+void update_all_priority ();
 
 #endif /* threads/thread.h */

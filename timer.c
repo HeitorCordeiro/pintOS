@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "lib/kernel/list.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -23,6 +24,7 @@ static int64_t ticks;
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
+//
 
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
@@ -92,10 +94,10 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  
-  if(timer_elapsed(start) < ticks && start+ticks > 0){
-    thread_sleep(start + ticks);
-  }
+  /*while (timer_elapsed (start) < ticks) 
+    thread_yield (); */
+ if(timer_elapsed(start)<ticks)
+    thread_sleep((start+ticks)); //substituida por thread sleep
 
 }
 
@@ -130,6 +132,8 @@ timer_nsleep (int64_t ns)
    interrupts off for the interval between timer ticks or longer
    will cause timer ticks to be lost.  Thus, use timer_msleep()
    instead if interrupts are enabled. */
+
+
 void
 timer_mdelay (int64_t ms) 
 {
@@ -169,32 +173,28 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
-
-/*int increase_recent_cpu(int recent_cpu){
-
-  return recent_cpu = recent_cpu + FLOAT_CONST(1);
-
-}*/
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-
   ticks++;
-  thread_tick ();
-  thread_wakeup();
+  thread_tick (); 
+  thread_wakeup (); //adicionada funcao wakeup
 
   if(thread_mlfqs){
-    thread_current()->recent_cpu = increase_recent_cpu(thread_current()->recent_cpu);
-    if(timer_ticks()%TIMER_FREQ==0){
-      thread_update_load();
-      thread_update_recent_cpu_threads();
+
+    increase_recent_cpu(thread_current());
+
+    if(timer_ticks()%TIMER_FREQ==0)
+    {
+      thread_update_load_avg();
+      update_all_recent_cpu();
     }
-    if(timer_ticks()%4==0){
-      thread_update_priority_threads();
+    if(timer_ticks()%4==0)
+    {
+      update_all_priority();
     }
   }
-
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
