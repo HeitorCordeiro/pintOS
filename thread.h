@@ -146,7 +146,6 @@ int thread_get_load_avg (void);
 void thread_sleep(int64_t);
 void thread_wakeup(void);
 
-void start_load(void);
 void thread_update_priority(struct thread *t);
 void thread_update_recent_cpu(struct thread *t);
 void increase_recent_cpu(struct thread *t);
